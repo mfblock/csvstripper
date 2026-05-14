@@ -1,6 +1,6 @@
 import io
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from typing import Optional, Tuple, List
 
 import pandas as pd
@@ -83,7 +83,7 @@ def autodetect_datetime_columns(df: pd.DataFrame, sample_rows: int = 1000) -> Li
     sample = df.head(sample_rows)
     for col in df.columns:
         # to_datetime with errors='coerce' on the sample
-        parsed = pd.to_datetime(sample[col], errors="coerce", utc=True, infer_datetime_format=True)
+        parsed = pd.to_datetime(sample[col], errors="coerce", utc=True)
         ratio = parsed.notna().mean()
         if ratio >= 0.5:
             candidates.append(col)
@@ -95,12 +95,9 @@ def build_date_mask_from_strings(series: pd.Series, days: int) -> pd.Series:
     filter the ORIGINAL df (so original text stays untouched).
     """
     # Use UTC to avoid timezone headaches; “last N days” relative to now UTC is usually fine.
-    now = pd.Timestamp.utcnow().normalize() + pd.Timedelta(hours=datetime.utcnow().hour,
-                                                           minutes=datetime.utcnow().minute,
-                                                           seconds=datetime.utcnow().second,
-                                                           microseconds=datetime.utcnow().microsecond)
+    now = pd.Timestamp.now(tz="UTC")
     cutoff = now - pd.Timedelta(days=days)
-    parsed = pd.to_datetime(series, errors="coerce", utc=True, infer_datetime_format=True)
+    parsed = pd.to_datetime(series, errors="coerce", utc=True)
     return parsed >= cutoff
 
 def main():
